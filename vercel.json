@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "functions": {
+    "backend/app.py": {
+      "includeFiles": "{public/**,frontend/**}"
+    }
+  }
+}

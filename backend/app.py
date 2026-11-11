@@ -35,9 +35,12 @@ class UrlRequest(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     # Cleanup any old media files older than 24 hours on launch
-    cleanup_old_files(DOWNLOADS_DIR, max_age_seconds=86400)
-    cleanup_old_files(PREVIEWS_DIR, max_age_seconds=86400)
-    cleanup_old_files(UPLOADS_DIR, max_age_seconds=86400)
+    try:
+        cleanup_old_files(DOWNLOADS_DIR, max_age_seconds=86400)
+        cleanup_old_files(PREVIEWS_DIR, max_age_seconds=86400)
+        cleanup_old_files(UPLOADS_DIR, max_age_seconds=86400)
+    except Exception:
+        pass
 
 @app.get("/api/status")
 async def get_status():
@@ -211,5 +214,18 @@ async def get_preview_image(filename: str):
         raise HTTPException(status_code=404, detail="Preview image not found.")
     return FileResponse(path=file_path, media_type="image/jpeg")
 
-# Mount frontend
-app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+# Fallback root route to serve index.html directly
+@app.get("/")
+async def root():
+    for candidate in [BASE_DIR / "public" / "index.html", BASE_DIR / "frontend" / "index.html"]:
+        if candidate.exists():
+            return FileResponse(candidate)
+    return {"status": "online", "name": "Media Studio"}
+
+# Mount frontend / public assets safely for both local server and cloud runtimes
+static_dir = BASE_DIR / "public" if (BASE_DIR / "public").exists() else BASE_DIR / "frontend"
+if static_dir.exists():
+    try:
+        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="frontend")
+    except Exception as e:
+        pass
