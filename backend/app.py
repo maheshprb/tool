@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -173,9 +173,18 @@ async def api_audio_to_video(
         if temp_image and temp_image.exists():
             temp_image.unlink(missing_ok=True)
 
+def iter_file_chunks(file_path: Path, chunk_size: int = 65536):
+    """Yield file chunks to enable true chunked HTTP streaming on Vercel."""
+    with open(file_path, "rb") as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
+
 @app.get("/api/media/{filename}")
 async def stream_media(filename: str):
-    """Stream media file directly for in-browser video / audio playback preview."""
+    """Stream media file directly for in-browser video / audio playback preview without 4.5MB limit."""
     file_path = DOWNLOADS_DIR / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Media file not found.")
@@ -187,12 +196,21 @@ async def stream_media(filename: str):
         media_type = "audio/mp4"
     elif filename.endswith(".wav"):
         media_type = "audio/wav"
-        
-    return FileResponse(path=file_path, media_type=media_type)
+
+    filesize = file_path.stat().st_size
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Length": str(filesize),
+    }
+    return StreamingResponse(
+        iter_file_chunks(file_path),
+        media_type=media_type,
+        headers=headers
+    )
 
 @app.get("/api/media/download/{filename}")
 async def download_media(filename: str):
-    """Direct file download attachment with proper user-friendly file name."""
+    """Direct file download attachment with proper user-friendly file name via chunked stream."""
     file_path = DOWNLOADS_DIR / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File expired or not found.")
@@ -200,11 +218,16 @@ async def download_media(filename: str):
     # Strip random UUID prefix if present for clean download name
     parts = filename.split("_", 1)
     clean_name = parts[1] if len(parts) > 1 else filename
+    filesize = file_path.stat().st_size
     
-    return FileResponse(
-        path=file_path,
-        filename=clean_name,
-        media_type="application/octet-stream"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{clean_name}"',
+        "Content-Length": str(filesize),
+    }
+    return StreamingResponse(
+        iter_file_chunks(file_path),
+        media_type="application/octet-stream",
+        headers=headers
     )
 
 @app.get("/api/previews/{filename}")

@@ -3,6 +3,7 @@
   "cleanUrls": true,
   "functions": {
     "backend/app.py": {
+      "maxDuration": 60,
       "includeFiles": "{public/**,frontend/**}"
     }
   }
