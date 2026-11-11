@@ -1,10 +1,9 @@
 import math
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
-import numpy as np
+from .utils import get_storage_dirs
 
-PREVIEWS_DIR = Path(__file__).parent.parent / "media_storage" / "previews"
-PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
+_, PREVIEWS_DIR, _ = get_storage_dirs()
 
 THEMES = {
     "midnight": {
@@ -57,20 +56,30 @@ ASPECT_RATIOS = {
 
 def create_gradient_canvas(width: int, height: int, color_top: tuple, color_bottom: tuple) -> Image.Image:
     """Create a high quality vertical gradient canvas."""
-    base = Image.new("RGB", (width, height), color_top)
-    top_r, top_g, top_b = color_top
-    bot_r, bot_g, bot_b = color_bottom
-    
-    # Generate smooth gradient using numpy
-    gradient = np.zeros((height, width, 3), dtype=np.uint8)
-    for y in range(height):
-        factor = y / float(height - 1)
-        r = int(top_r + (bot_r - top_r) * factor)
-        g = int(top_g + (bot_g - top_g) * factor)
-        b = int(top_b + (bot_b - top_b) * factor)
-        gradient[y, :, :] = [r, g, b]
-        
-    return Image.fromarray(gradient)
+    try:
+        import numpy as np
+        gradient = np.zeros((height, width, 3), dtype=np.uint8)
+        top_r, top_g, top_b = color_top
+        bot_r, bot_g, bot_b = color_bottom
+        for y in range(height):
+            factor = y / float(height - 1)
+            r = int(top_r + (bot_r - top_r) * factor)
+            g = int(top_g + (bot_g - top_g) * factor)
+            b = int(top_b + (bot_b - top_b) * factor)
+            gradient[y, :, :] = [r, g, b]
+        return Image.fromarray(gradient)
+    except Exception:
+        # High-speed pure PIL fallback if numpy is unavailable
+        base = Image.new("RGB", (1, height), color_top)
+        top_r, top_g, top_b = color_top
+        bot_r, bot_g, bot_b = color_bottom
+        for y in range(height):
+            factor = y / float(height - 1)
+            r = int(top_r + (bot_r - top_r) * factor)
+            g = int(top_g + (bot_g - top_g) * factor)
+            b = int(top_b + (bot_b - top_b) * factor)
+            base.putpixel((0, y), (r, g, b))
+        return base.resize((width, height), Image.Resampling.BILINEAR)
 
 def draw_vinyl_graphic(draw: ImageDraw.ImageDraw, center_x: int, center_y: int, radius: int, accent_color: tuple):
     """Draw an elegant minimalist vinyl disc and sound ring."""
