@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Media Studio</title>
+  
+  <!-- PWA & Mobile Meta -->
+  <meta name="theme-color" content="#f7f5ef">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/assets/icon-192.png">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Custom Luxury Stylesheet -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="selection:bg-amber-400 selection:text-black">
+
+  <!-- Subtle Ambient Glow -->
+  <div class="ambient-glow"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Top Tool Header (No brand name) -->
+  <header class="sticky top-0 z-30 border-b border-[#e4e1d8] bg-[#faf9f5]/95 backdrop-blur-md">
+    <div class="max-w-4xl mx-auto px-2.5 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-3">
+      
+      <!-- Tool Switcher on Top -->
+      <nav class="tool-switcher-nav flex-1 grid grid-cols-4 gap-1 sm:gap-1.5 p-1 rounded-xl bg-[#eeece4] border border-[#dedbd1]" role="tablist">
+        <button data-tab-target="tab-downloader" role="tab" aria-selected="true" class="tool-tab-btn active flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2.5 px-0.5 sm:px-3 rounded-lg text-[9.5px] sm:text-xs font-semibold transition-all">
+          <i data-lucide="download" class="w-3.5 h-3.5 shrink-0"></i>
+          <span class="sm:hidden">Download</span>
+          <span class="hidden sm:inline">Video Downloader</span>
+        </button>
+        <button data-tab-target="tab-extractor" role="tab" aria-selected="false" class="tool-tab-btn flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2.5 px-0.5 sm:px-3 rounded-lg text-[9.5px] sm:text-xs font-semibold transition-all">
+          <i data-lucide="music" class="w-3.5 h-3.5 shrink-0"></i>
+          <span class="sm:hidden">Audio</span>
+          <span class="hidden sm:inline">Link to Audio</span>
+        </button>
+        <button data-tab-target="tab-v2a" role="tab" aria-selected="false" class="tool-tab-btn flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2.5 px-0.5 sm:px-3 rounded-lg text-[9.5px] sm:text-xs font-semibold transition-all">
+          <i data-lucide="repeat" class="w-3.5 h-3.5 shrink-0"></i>
+          <span class="sm:hidden">V to A</span>
+          <span class="hidden sm:inline">Video to Audio</span>
+        </button>
+        <button data-tab-target="tab-a2v" role="tab" aria-selected="false" class="tool-tab-btn flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2.5 px-0.5 sm:px-3 rounded-lg text-[9.5px] sm:text-xs font-semibold transition-all">
+          <i data-lucide="film" class="w-3.5 h-3.5 shrink-0"></i>
+          <span class="sm:hidden">A to V</span>
+          <span class="hidden sm:inline">Audio to Video</span>
+        </button>
+      </nav>
+
+      <!-- Phone QR Connect Button -->
+      <button id="open-qr-modal-btn" title="Phone Connect" class="shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2.5 rounded-xl btn-ghost text-xs font-medium active:scale-95 transition-all">
+        <i data-lucide="smartphone" class="w-4 h-4 text-[#777b5f]"></i>
+        <span class="hidden md:inline">Phone Connect</span>
+      </button>
+
+    </div>
+  </header>
+
+  <!-- Main Surface: Zero hero fluff, 100% handy and immediate -->
+  <main class="relative z-10 max-w-2xl mx-auto px-3.5 sm:px-6 py-4 pb-12 space-y-4">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: VIDEO DOWNLOADER -->
+    <!-- ========================================== -->
+    <section id="tab-downloader" class="tab-content active space-y-4">
+      
+      <!-- Instant Input Card -->
+      <div id="dl-input-card" class="glass-panel rounded-2xl p-4 sm:p-5 space-y-3.5 transition-all">
+        
+        <!-- Auto-Detection Status Banner (No logos) -->
+        <div class="flex items-center justify-between min-h-[28px]">
+          <!-- Dynamic Detected Platform Badge -->
+          <div id="dl-platform-indicator" class="flex items-center gap-2 text-xs font-medium transition-all">
+            <span class="text-slate-400 text-[11px] uppercase tracking-wider font-mono">Paste Link:</span>
+            <span class="text-slate-500 text-xs">YouTube, Instagram, Facebook & web video</span>
+          </div>
+
+          <!-- Quick Clear / Reset Controls -->
+          <div class="flex items-center gap-1.5">
+            <button id="dl-clear-btn" class="hidden text-xs text-slate-400 hover:text-white px-2 py-0.5 rounded-md hover:bg-white/[0.05]">
+              Clear ✕
+            </button>
+            <button id="dl-reset-btn" type="button" title="Reset tool" class="btn-reset flex items-center gap-1 text-xs text-slate-500 hover:text-[#292b25] px-2.5 py-1 rounded-md bg-[#eeece4] hover:bg-[#e4e1d7] border border-[#dedbd1] transition-all active:scale-95">
+              <i data-lucide="rotate-ccw" class="w-3 h-3 text-[#777b5f]"></i>
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- URL Input with Paste inside -->
+        <div class="relative flex items-center">
+          <input 
+            type="url" 
+            id="dl-url-input" 
+            placeholder="Paste YouTube, Instagram, or Facebook link..."
+            autocomplete="off"
+            spellcheck="false"
+            class="w-full bg-[#0A0D14] border border-white/[0.1] focus:border-amber-400/60 rounded-xl py-3.5 pl-4 pr-24 text-sm sm:text-base text-white placeholder-slate-500 outline-none transition-all shadow-inner"
+          />
+          <button 
+            type="button" 
+            onclick="pasteFromClipboard('dl-url-input')"
+            class="absolute right-1.5 px-3 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95"
+          >
+            <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+            <span>Paste</span>
+          </button>
+        </div>
+
+        <!-- Inspect Button -->
+        <button 
+          id="dl-inspect-btn" 
+          class="w-full btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base font-semibold"
+        >
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <span>Inspect & Preview Video</span>
+        </button>
+
+        <!-- Loading Indicator -->
+        <div id="dl-loading" class="hidden p-4 rounded-xl glass-panel-elevated text-center loading-shimmer">
+          <div class="flex items-center justify-center gap-2.5 text-amber-300 text-xs sm:text-sm font-medium">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+            <span>Fetching video details and preparing preview...</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Preview & Download Section -->
+      <div id="dl-preview-card" class="hidden glass-panel-elevated rounded-2xl p-4 sm:p-5 space-y-4">
+        
+        <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-semibold text-white">Preview Ready</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="dl-preview-duration" class="px-2 py-0.5 rounded-md bg-black/50 text-[11px] text-slate-300 font-mono">0:00</span>
+            <button id="dl-preview-reset-btn" type="button" title="Reset and paste new link" class="btn-reset flex items-center gap-1 text-xs text-slate-500 hover:text-[#292b25] px-2.5 py-1 rounded-md bg-[#eeece4] hover:bg-[#e4e1d7] border border-[#dedbd1] transition-all active:scale-95">
+              <i data-lucide="rotate-ccw" class="w-3 h-3 text-[#777b5f]"></i>
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Player Container -->
+        <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black/80 border border-white/[0.08]">
+          <div id="dl-thumb-container" class="absolute inset-0 flex items-center justify-center">
+            <img id="dl-preview-thumb" src="" alt="Thumbnail" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-black/25"></div>
+            <button id="dl-play-direct-btn" class="hidden absolute w-14 h-14 rounded-full bg-amber-400 text-black flex items-center justify-center shadow-lg shadow-amber-400/30 hover:scale-105 active:scale-95 transition-all">
+              <i data-lucide="play" class="w-6 h-6 ml-0.5"></i>
+            </button>
+          </div>
+          <video id="dl-preview-video" class="hidden w-full h-full object-contain" playsinline controls></video>
+        </div>
+
+        <!-- Video Metadata -->
+        <div>
+          <h2 id="dl-preview-title" class="text-sm sm:text-base font-semibold text-white leading-snug line-clamp-2">Video Title</h2>
+          <p id="dl-preview-author" class="text-xs text-amber-200/70 mt-1 flex items-center gap-1.5">
+            <i data-lucide="user" class="w-3 h-3"></i>
+            <span>Creator</span>
+          </p>
+        </div>
+
+        <!-- Quality Selector & Download -->
+        <div class="space-y-3 pt-1">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 font-medium">Quality:</span>
+            <select id="dl-quality-select" class="flex-1 bg-[#0A0D14] border border-white/[0.1] rounded-lg py-2 px-3 text-xs text-white focus:border-amber-400/60 outline-none">
+            </select>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2">
+            <button id="dl-download-btn" class="flex-1 btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base font-semibold">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Download MP4 Video</span>
+            </button>
+            <button id="dl-preview-cancel-btn" type="button" class="btn-ghost py-3.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold active:scale-95">
+              <i data-lucide="rotate-ccw" class="w-4 h-4 text-[#777b5f]"></i>
+              <span>Reset / New Link</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: LINK TO AUDIO EXTRACTOR -->
+    <!-- ========================================== -->
+    <section id="tab-extractor" class="tab-content space-y-4">
+      
+      <!-- Input Card -->
+      <div id="ext-input-card" class="glass-panel rounded-2xl p-4 sm:p-5 space-y-3.5 transition-all">
+        
+        <!-- Detected Platform Badge (No logos) -->
+        <div class="flex items-center justify-between min-h-[28px]">
+          <div id="ext-platform-indicator" class="flex items-center gap-2 text-xs font-medium transition-all">
+            <span class="text-slate-400 text-[11px] uppercase tracking-wider font-mono">Audio Extraction:</span>
+            <span class="text-slate-500 text-xs">Converts link directly to MP3 stream</span>
+          </div>
+
+          <!-- Quick Clear / Reset Controls -->
+          <div class="flex items-center gap-1.5">
+            <button id="ext-clear-btn" class="hidden text-xs text-slate-400 hover:text-white px-2 py-0.5 rounded-md hover:bg-white/[0.05]">
+              Clear ✕
+            </button>
+            <button id="ext-reset-btn" type="button" title="Reset tool" class="btn-reset flex items-center gap-1 text-xs text-slate-500 hover:text-[#292b25] px-2.5 py-1 rounded-md bg-[#eeece4] hover:bg-[#e4e1d7] border border-[#dedbd1] transition-all active:scale-95">
+              <i data-lucide="rotate-ccw" class="w-3 h-3 text-[#777b5f]"></i>
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- URL Input -->
+        <div class="relative flex items-center">
+          <input 
+            type="url" 
+            id="ext-url-input" 
+            placeholder="Paste video link for audio extraction..."
+            autocomplete="off"
+            spellcheck="false"
+            class="w-full bg-[#0A0D14] border border-white/[0.1] focus:border-amber-400/60 rounded-xl py-3.5 pl-4 pr-24 text-sm sm:text-base text-white placeholder-slate-500 outline-none transition-all shadow-inner"
+          />
+          <button 
+            type="button" 
+            onclick="pasteFromClipboard('ext-url-input')"
+            class="absolute right-1.5 px-3 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95"
+          >
+            <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+            <span>Paste</span>
+          </button>
+        </div>
+
+        <!-- Tactile Bitrate Selector Pills -->
+        <div class="flex items-center justify-between gap-2 pt-1">
+          <span class="text-xs text-slate-400 font-medium hidden sm:inline">Bitrate:</span>
+          <div class="grid grid-cols-3 gap-2 flex-1">
+            <label class="cursor-pointer">
+              <input type="radio" name="ext-bitrate" value="320" checked class="peer hidden">
+              <div class="p-2 rounded-lg border border-white/[0.08] peer-checked:border-amber-400 peer-checked:bg-amber-400/10 text-center transition-all">
+                <span class="text-xs font-semibold text-white block">320 kbps</span>
+                <span class="text-[9px] text-amber-200/70">Studio</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="ext-bitrate" value="192" class="peer hidden">
+              <div class="p-2 rounded-lg border border-white/[0.08] peer-checked:border-amber-400 peer-checked:bg-amber-400/10 text-center transition-all">
+                <span class="text-xs font-semibold text-white block">192 kbps</span>
+                <span class="text-[9px] text-slate-400">Standard</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="ext-bitrate" value="128" class="peer hidden">
+              <div class="p-2 rounded-lg border border-white/[0.08] peer-checked:border-amber-400 peer-checked:bg-amber-400/10 text-center transition-all">
+                <span class="text-xs font-semibold text-white block">128 kbps</span>
+                <span class="text-[9px] text-slate-400">Compact</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <button id="ext-extract-btn" class="w-full btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base font-semibold">
+          <i data-lucide="headphones" class="w-4 h-4"></i>
+          <span>Extract & Preview Audio</span>
+        </button>
+
+        <!-- Loading -->
+        <div id="ext-loading" class="hidden p-4 rounded-xl glass-panel-elevated text-center loading-shimmer">
+          <div class="flex items-center justify-center gap-2.5 text-amber-300 text-xs sm:text-sm font-medium">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+            <span>Extracting crystal-clear MP3 stream...</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Waveform Audio Preview Section -->
+      <div id="ext-preview-section" class="hidden glass-panel-elevated rounded-2xl p-4 sm:p-5 space-y-4">
+        
+        <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-semibold text-white">Audio Ready to Play</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="ext-preview-filesize" class="px-2 py-0.5 rounded-md bg-black/50 text-[11px] text-slate-300 font-mono">0.0 MB</span>
+            <button id="ext-preview-reset-btn" type="button" title="Reset and paste new link" class="btn-reset flex items-center gap-1 text-xs text-slate-500 hover:text-[#292b25] px-2.5 py-1 rounded-md bg-[#eeece4] hover:bg-[#e4e1d7] border border-[#dedbd1] transition-all active:scale-95">
+              <i data-lucide="rotate-ccw" class="w-3 h-3 text-[#777b5f]"></i>
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h2 id="ext-preview-title" class="text-sm sm:text-base font-semibold text-white line-clamp-1">Extracted Audio Track</h2>
+        </div>
+
+        <!-- Waveform Player -->
+        <div class="bg-[#0A0D14] p-3.5 rounded-xl border border-white/[0.06] space-y-3">
+          <canvas id="extractor-waveform" class="waveform-canvas cursor-pointer"></canvas>
+          <audio id="extractor-audio-elem" class="hidden"></audio>
+
+          <div class="flex items-center justify-between gap-3">
+            <button id="extractor-play-btn" class="w-10 h-10 rounded-full bg-amber-400 text-black flex items-center justify-center shadow-md active:scale-95 transition-all">
+              <i data-lucide="play" class="w-4 h-4 ml-0.5"></i>
+            </button>
+            <div class="flex-1">
+              <input type="range" id="extractor-seek-bar" min="0" max="100" value="0" class="w-full">
+            </div>
+            <span id="extractor-time-display" class="text-xs text-slate-300 font-mono">0:00 / 0:00</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button id="ext-save-btn" class="flex-1 btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base font-semibold">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Save MP3 to Device</span>
+          </button>
+          <button id="ext-preview-cancel-btn" type="button" class="btn-ghost py-3.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold active:scale-95">
+            <i data-lucide="rotate-ccw" class="w-4 h-4 text-[#777b5f]"></i>
+            <span>Reset / New Link</span>
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: VIDEO TO AUDIO (FILE) -->
+    <!-- ========================================== -->
+    <section id="tab-v2a" class="tab-content space-y-4">
+      
+      <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-4">
+        
+        <!-- Video Input Header with Reset -->
+        <div class="flex items-center justify-between min-h-[28px]">
+          <span class="text-slate-400 text-[11px] uppercase tracking-wider font-mono">Video File Input:</span>
+          <button id="v2a-reset-btn" type="button" title="Reset tool" class="btn-reset flex items-center gap-1 text-xs text-slate-500 hover:text-[#292b25] px-2.5 py-1 rounded-md bg-[#eeece4] hover:bg-[#e4e1d7] border border-[#dedbd1] transition-all active:scale-95">
+            <i data-lucide="rotate-ccw" class="w-3 h-3 text-[#777b5f]"></i>
+            <span>Reset</span>
+          </button>
+        </div>
+        
+        <!-- Compact Dropzone -->
+        <div 
+          id="v2a-dropzone" 
+          onclick="document.getElementById('v2a-file-input').click()"
+          class="border-2 border-dashed border-white/[0.12] hover:border-amber-400/50 rounded-2xl p-5 text-center cursor-pointer transition-all bg-[#0A0D14]/50 group"
+        >
+          <input type="file" id="v2a-file-input" accept="video/*" class="hidden">
+          
+          <div class="w-10 h-10 mx-auto rounded-xl bg-white/[0.04] group-hover:bg-amber-400/10 flex items-center justify-center text-amber-300 transition-all mb-2">
+            <i data-lucide="video" class="w-5 h-5"></i>
+          </div>
+
+          <span class="text-sm font-semibold text-white block">Choose Video File from Device</span>
+          <span class="text-[11px] text-slate-400 mt-0.5 block">MP4, MOV, MKV, AVI from gallery / files</span>
+          
+          <div id="v2a-file-info" class="hidden mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-200 text-xs font-mono">
+            <i data-lucide="file" class="w-3.5 h-3.5"></i>
+            <span id="v2a-filename">video.mp4</span>
+            <span class="opacity-50">•</span>
+            <span id="v2a-filesize">0 MB</span>
+          </div>
+        </div>
+
+        <!-- Format & Bitrate Settings -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1.5">Output Format</label>
+            <select id="v2a-format-select" class="w-full bg-[#0A0D14] border border-white/[0.1] rounded-xl py-2.5 px-3 text-xs text-white focus:border-amber-400/60 outline-none">
+              <option value="mp3" selected>MP3 (Universal)</option>
+              <option value="m4a">M4A (AAC)</option>
+              <option value="wav">WAV (Lossless)</option>
+              <option value="flac">FLAC (Hi-Res)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1.5">Bitrate</label>
+            <select id="v2a-bitrate-select" class="w-full bg-[#0A0D14] border border-white/[0.1] rounded-xl py-2.5 px-3 text-xs text-white focus:border-amber-400/60 outline-none">
+              <option value="320k" selected>320 kbps (Supreme)</option>
+              <option value="256k">256 kbps (High)</option>
+              <option value="192k">192 kbps (Standard)</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="v2a-convert-btn" disabled class="w-full btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base font-semibold disabled:opacity-40 disabled:pointer-events-none transition-all">
+          <i data-lucide="arrow-right-left" class="w-4 h-4"></i>
+          <span>Convert Video to Audio</span>
+        </button>
+
+        <div id="v2a-loading" class="hidden p-4 rounded-xl glass-panel-elevated text-center loading-shimmer">
+          <div class="flex items-center justify-center gap-2.5 text-amber-300 text-xs sm:text-sm font-medium">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+            <span>Converting audio stream...</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Preview Player for Converted Audio -->
+      <div id="v2a-preview-section" class="hidden glass-panel-elevated rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-semibold text-white">Audio Converted</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="v2a-preview-format" class="px-2 py-0.5 rounded-md bg-black/50 text-[11px] text-slate-300 font-mono">MP3</span>
+            <button id="v2a-preview-reset-btn" type="button" title="Reset and pick new file" class="btn-reset flex items-center gap-1 text-xs text-slate-500 hover:text-[#292b25] px-2.5 py-1 rounded-md bg-[#eeece4] hover:bg-[#e4e1d7] border border-[#dedbd1] transition-all active:scale-95">
+              <i data-lucide="rotate-ccw" class="w-3 h-3 text-[#777b5f]"></i>
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <h2 id="v2a-preview-title" class="text-sm sm:text-base font-semibold text-white line-clamp-1">audio.mp3</h2>
+
+        <div class="bg-[#0A0D14] p-3.5 rounded-xl border border-white/[0.06] space-y-3">
+          <canvas id="v2a-waveform" class="waveform-canvas cursor-pointer"></canvas>
+          <audio id="v2a-audio-elem" class="hidden"></audio>
+
+          <div class="flex items-center justify-between gap-3">
+            <button id="v2a-play-btn" class="w-10 h-10 rounded-full bg-amber-400 text-black flex items-center justify-center shadow-md active:scale-95 transition-all">
+              <i data-lucide="play" class="w-4 h-4 ml-0.5"></i>
+            </button>
+            <div class="flex-1">
+              <input type="range" id="v2a-seek-bar" min="0" max="100" value="0" class="w-full">
+            </div>
+            <span id="v2a-time-display" class="text-xs text-slate-300 font-mono">0:00 / 0:00</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button id="v2a-save-btn" class="flex-1 btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base font-semibold">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Save Audio to Device</span>
+          </button>
+          <button id="v2a-preview-cancel-btn" type="button" class="btn-ghost py-3.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold active:scale-95">
+            <i data-lucide="rotate-ccw" class="w-4 h-4 text-[#777b5f]"></i>
+            <span>Reset / New File</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: AUDIO TO VIDEO (CONVERTER) -->
+    <!-- ========================================== -->
+    <section id="tab-a2v" class="tab-content space-y-4">
+      
+      <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-4">
+        
+        <!-- Audio to Video Input Header with Reset -->
+        <div class="flex items-center justify-between min-h-[28px]">
+          <span class="text-slate-400 text-[11px] uppercase tracking-wider font-mono">Audio to Video Studio:</span>
+          <button id="a2v-reset-btn" type="button" title="Reset creator" class="btn-reset flex items-center gap-1 text-xs text-slate-500 hover:text-[#292b25] px-2.5 py-1 rounded-md bg-[#eeece4] hover:bg-[#e4e1d7] border border-[#dedbd1] transition-all active:scale-95">
+            <i data-lucide="rotate-ccw" class="w-3 h-3 text-[#777b5f]"></i>
+            <span>Reset</span>
+          </button>
+        </div>
+        
+        <!-- Step 1: Pick Audio -->
+        <div>
+          <label class="block text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1.5">1. Select Audio Track</label>
+          <div 
+            onclick="document.getElementById('a2v-audio-input').click()"
+            class="border-2 border-dashed border-white/[0.12] hover:border-amber-400/50 rounded-xl p-4 text-center cursor-pointer transition-all bg-[#0A0D14]/50"
+          >
+            <input type="file" id="a2v-audio-input" accept="audio/*" class="hidden">
+            <i data-lucide="mic" class="w-5 h-5 mx-auto text-amber-300 mb-1"></i>
+            <span class="text-xs font-semibold text-white block">Tap to Select Audio File</span>
+            <div id="a2v-audio-info" class="hidden mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-400/10 text-amber-200 text-xs font-mono">
+              <span id="a2v-audio-name">audio.mp3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Dimensions & Theme -->
+        <div class="space-y-3">
+          <label class="block text-[11px] font-medium text-slate-400 uppercase tracking-wider">2. Aspect Ratio</label>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="cursor-pointer">
+              <input type="radio" name="a2v-aspect" value="16:9" checked class="peer hidden">
+              <div class="p-2.5 rounded-xl border border-white/[0.08] peer-checked:border-amber-400 peer-checked:bg-amber-400/10 text-center transition-all">
+                <span class="text-xs font-semibold text-white block">16:9</span>
+                <span class="text-[10px] text-slate-400">YouTube/TV</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="a2v-aspect" value="9:16" class="peer hidden">
+              <div class="p-2.5 rounded-xl border border-white/[0.08] peer-checked:border-amber-400 peer-checked:bg-amber-400/10 text-center transition-all">
+                <span class="text-xs font-semibold text-white block">9:16</span>
+                <span class="text-[10px] text-slate-400">Reels/Shorts</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="a2v-aspect" value="1:1" class="peer hidden">
+              <div class="p-2.5 rounded-xl border border-white/[0.08] peer-checked:border-amber-400 peer-checked:bg-amber-400/10 text-center transition-all">
+                <span class="text-xs font-semibold text-white block">1:1</span>
+                <span class="text-[10px] text-slate-400">Square Post</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Themes & Custom Photo -->
+        <div>
+          <label class="block text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1.5">3. Backdrop Style</label>
+          <div class="grid grid-cols-5 gap-1.5">
+            <label class="cursor-pointer">
+              <input type="radio" name="a2v-theme" value="midnight" checked class="peer hidden">
+              <div class="p-2 rounded-lg border border-white/[0.08] peer-checked:border-amber-400 text-center bg-[#0B0C10]">
+                <span class="text-[10px] font-semibold text-amber-200 block">Midnight</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="a2v-theme" value="sunset" class="peer hidden">
+              <div class="p-2 rounded-lg border border-white/[0.08] peer-checked:border-amber-400 text-center bg-[#2E1624]">
+                <span class="text-[10px] font-semibold text-amber-200 block">Sunset</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="a2v-theme" value="emerald" class="peer hidden">
+              <div class="p-2 rounded-lg border border-white/[0.08] peer-checked:border-amber-400 text-center bg-[#0B2019]">
+                <span class="text-[10px] font-semibold text-emerald-200 block">Emerald</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="a2v-theme" value="sapphire" class="peer hidden">
+              <div class="p-2 rounded-lg border border-white/[0.08] peer-checked:border-amber-400 text-center bg-[#0A162C]">
+                <span class="text-[10px] font-semibold text-blue-200 block">Sapphire</span>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="a2v-theme" value="noir" class="peer hidden">
+              <div class="p-2 rounded-lg border border-white/[0.08] peer-checked:border-amber-400 text-center bg-[#151619]">
+                <span class="text-[10px] font-semibold text-zinc-200 block">Noir</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="mt-2.5 flex items-center justify-between text-xs">
+            <span class="text-slate-400 text-[11px]">Or custom photo:</span>
+            <button 
+              type="button" 
+              onclick="document.getElementById('a2v-art-input').click()"
+              class="px-2.5 py-1 rounded-md btn-ghost text-xs flex items-center gap-1"
+            >
+              <i data-lucide="image" class="w-3 h-3 text-amber-300"></i>
+              <span>Attach Photo</span>
+            </button>
+            <input type="file" id="a2v-art-input" accept="image/*" class="hidden">
+          </div>
+          <div id="a2v-art-info" class="hidden mt-1.5 text-xs text-amber-200 flex items-center gap-1.5">
+            <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span id="a2v-art-name">photo.jpg</span>
+          </div>
+        </div>
+
+        <button id="a2v-generate-btn" disabled class="w-full btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base font-semibold disabled:opacity-40 disabled:pointer-events-none transition-all">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>Create MP4 Video</span>
+        </button>
+
+        <div id="a2v-loading" class="hidden p-4 rounded-xl glass-panel-elevated text-center loading-shimmer">
+          <div class="flex items-center justify-center gap-2.5 text-amber-300 text-xs sm:text-sm font-medium">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+            <span>Rendering video with FFmpeg...</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Video Preview Section -->
+      <div id="a2v-preview-section" class="hidden glass-panel-elevated rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-semibold text-white">Video Ready</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="a2v-preview-details" class="px-2 py-0.5 rounded-md bg-black/50 text-[11px] text-slate-300 font-mono">16:9 • 0:00</span>
+            <button id="a2v-preview-reset-btn" type="button" title="Reset and create new video" class="btn-reset flex items-center gap-1 text-xs text-slate-500 hover:text-[#292b25] px-2.5 py-1 rounded-md bg-[#eeece4] hover:bg-[#e4e1d7] border border-[#dedbd1] transition-all active:scale-95">
+              <i data-lucide="rotate-ccw" class="w-3 h-3 text-[#777b5f]"></i>
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <h2 id="a2v-preview-title" class="text-sm sm:text-base font-semibold text-white">Rendered Video</h2>
+
+        <div class="rounded-xl overflow-hidden bg-black/90 border border-white/[0.08]">
+          <video id="a2v-preview-video" class="w-full max-h-[380px] object-contain mx-auto" playsinline controls></video>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button id="a2v-save-btn" class="flex-1 btn-gold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base font-semibold">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Save Video to Device</span>
+          </button>
+          <button id="a2v-preview-cancel-btn" type="button" class="btn-ghost py-3.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold active:scale-95">
+            <i data-lucide="rotate-ccw" class="w-4 h-4 text-[#777b5f]"></i>
+            <span>Reset / New File</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Mobile Bottom-First Navigation Menu -->
+  <nav id="mobile-bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#faf9f5]/95 backdrop-blur-xl border-t border-[#dedbd1] shadow-[0_-4px_20px_rgba(47,46,37,0.06)]" style="padding-bottom: max(6px, env(safe-area-inset-bottom, 6px));">
+    <div class="grid grid-cols-4 px-2 py-1.5 text-center gap-1">
+      <button data-tab-target="tab-downloader" role="tab" aria-selected="true" class="mobile-nav-item active flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all text-[#292b25] active:scale-95">
+        <div class="nav-icon-box w-7 h-7 rounded-lg flex items-center justify-center transition-all bg-[#292b25] text-[#fffefa] shadow-sm">
+          <i data-lucide="download" class="w-4 h-4"></i>
+        </div>
+        <span class="text-[10px] font-semibold mt-1 tracking-tight">Downloader</span>
+      </button>
+
+      <button data-tab-target="tab-extractor" role="tab" aria-selected="false" class="mobile-nav-item flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all text-[#74766d] active:scale-95">
+        <div class="nav-icon-box w-7 h-7 rounded-lg flex items-center justify-center transition-all bg-transparent text-[#74766d]">
+          <i data-lucide="music" class="w-4 h-4"></i>
+        </div>
+        <span class="text-[10px] font-medium mt-1 tracking-tight">Link Audio</span>
+      </button>
+
+      <button data-tab-target="tab-v2a" role="tab" aria-selected="false" class="mobile-nav-item flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all text-[#74766d] active:scale-95">
+        <div class="nav-icon-box w-7 h-7 rounded-lg flex items-center justify-center transition-all bg-transparent text-[#74766d]">
+          <i data-lucide="repeat" class="w-4 h-4"></i>
+        </div>
+        <span class="text-[10px] font-medium mt-1 tracking-tight">Vid to Aud</span>
+      </button>
+
+      <button data-tab-target="tab-a2v" role="tab" aria-selected="false" class="mobile-nav-item flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all text-[#74766d] active:scale-95">
+        <div class="nav-icon-box w-7 h-7 rounded-lg flex items-center justify-center transition-all bg-transparent text-[#74766d]">
+          <i data-lucide="film" class="w-4 h-4"></i>
+        </div>
+        <span class="text-[10px] font-medium mt-1 tracking-tight">Aud to Vid</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Phone Connect QR Modal -->
+  <div id="qr-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div class="glass-panel-elevated rounded-2xl p-5 sm:p-6 max-w-xs w-full text-center space-y-4 border border-white/[0.12] shadow-2xl">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold uppercase tracking-wider text-amber-300">Open on Your Phone</span>
+        <button id="close-qr-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-3 bg-white rounded-xl inline-block shadow mx-auto">
+        <img id="qr-image" src="" alt="Scan QR code" class="w-40 h-40 mx-auto object-contain">
+      </div>
+
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Scan with your phone's camera to open on the same Wi-Fi.
+      </p>
+
+      <div class="p-2.5 rounded-lg bg-black/40 border border-white/[0.08] flex items-center justify-between text-xs font-mono text-amber-200">
+        <span id="qr-url-text" class="truncate">http://...</span>
+        <button id="qr-copy-url-btn" class="ml-2 text-slate-400 hover:text-white">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Initialize Lucide Icons -->
+  <script>
+    lucide.createIcons();
+  </script>
+
+  <!-- App Logic -->
+  <script src="/js/player.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
