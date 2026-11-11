@@ -89,7 +89,14 @@ async def download_video(req: UrlRequest, background_tasks: BackgroundTasks):
         result = download_video_stream(req.url.strip(), quality_id=req.quality or "best")
         return {"success": True, "data": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+        error_msg = str(e)
+        if "bot" in error_msg.lower() or "sign in" in error_msg.lower():
+            detail = "YouTube Bot Detection: Cloud server IP blocked by YouTube. Run locally via start.bat or try an Instagram/Facebook video."
+        elif "timed out" in error_msg.lower():
+            detail = "Video download timed out on cloud server. Please choose a 720p or 480p resolution."
+        else:
+            detail = f"Download failed: {error_msg.split(';')[0]}"
+        raise HTTPException(status_code=500, detail=detail)
 
 @app.post("/api/extract-audio")
 async def extract_audio_from_url(req: UrlRequest, background_tasks: BackgroundTasks):
@@ -99,7 +106,14 @@ async def extract_audio_from_url(req: UrlRequest, background_tasks: BackgroundTa
         result = extract_audio_stream(req.url.strip(), bitrate=req.bitrate or "320")
         return {"success": True, "data": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Audio extraction failed: {str(e)}")
+        error_msg = str(e)
+        if "bot" in error_msg.lower() or "sign in" in error_msg.lower():
+            detail = "YouTube Bot Detection: Cloud server IP blocked by YouTube. Run locally via start.bat or try an Instagram/Facebook video."
+        elif "timed out" in error_msg.lower():
+            detail = "Audio extraction timed out on cloud server. Please try again."
+        else:
+            detail = f"Audio extraction failed: {error_msg.split(';')[0]}"
+        raise HTTPException(status_code=500, detail=detail)
 
 @app.post("/api/convert/video-to-audio")
 async def api_video_to_audio(

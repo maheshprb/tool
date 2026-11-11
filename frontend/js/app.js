@@ -223,6 +223,28 @@ function initPlatformDetectors() {
   setupDetector('ext-url-input', 'ext-input-card', 'ext-platform-indicator', 'ext-clear-btn', defaultExtHtml);
 }
 
+// Safe JSON parser that catches non-JSON HTML error pages from Vercel / serverless proxies
+async function safeFetchJson(resp) {
+  const text = await resp.text();
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch (err) {
+    if (resp.status === 504) {
+      throw new Error("Download took too long on the cloud server. Please choose 720p or 480p for faster processing.");
+    }
+    if (resp.status === 500 || text.includes("A server error has occurred")) {
+      throw new Error("YouTube Bot Detection: Cloud server IP blocked by YouTube. For YouTube, run locally via start.bat, or try Instagram/Facebook videos.");
+    }
+    throw new Error(text.length < 150 ? text : `Server request failed (HTTP ${resp.status}).`);
+  }
+  if (!resp.ok) {
+    const errorMsg = (data && data.detail) ? data.detail : `Server error (${resp.status})`;
+    throw new Error(errorMsg);
+  }
+  return data;
+}
+
 // 1. VIDEO DOWNLOADER FLOW
 function initDownloaderFlow() {
   const input = document.getElementById('dl-url-input');
@@ -251,11 +273,7 @@ function initDownloaderFlow() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       });
-      const data = await resp.json();
-
-      if (!resp.ok) {
-        throw new Error(data.detail || "Failed to inspect video details.");
-      }
+      const data = await safeFetchJson(resp);
 
       currentInfo = data.data;
       displayVideoInfo(currentInfo);
@@ -304,10 +322,15 @@ function initDownloaderFlow() {
     const videoElem = document.getElementById('dl-preview-video');
     const thumbElem = document.getElementById('dl-thumb-container');
     const playDirectBtn = document.getElementById('dl-play-direct-btn');
+    const directLinkBtn = document.getElementById('dl-direct-stream-btn');
 
     if (info.direct_preview_url) {
       videoElem.src = info.direct_preview_url;
       playDirectBtn.classList.remove('hidden');
+      if (directLinkBtn) {
+        directLinkBtn.href = info.direct_preview_url;
+        directLinkBtn.classList.remove('hidden');
+      }
       playDirectBtn.onclick = () => {
         thumbElem.classList.add('hidden');
         videoElem.classList.remove('hidden');
@@ -317,6 +340,7 @@ function initDownloaderFlow() {
       playDirectBtn.classList.add('hidden');
       videoElem.classList.add('hidden');
       thumbElem.classList.remove('hidden');
+      if (directLinkBtn) directLinkBtn.classList.add('hidden');
     }
 
     previewCard.classList.remove('hidden');
@@ -333,9 +357,11 @@ function initDownloaderFlow() {
     const videoElem = document.getElementById('dl-preview-video');
     const thumbElem = document.getElementById('dl-thumb-container');
     const playDirectBtn = document.getElementById('dl-play-direct-btn');
+    const directLinkBtn = document.getElementById('dl-direct-stream-btn');
     const clearBtn = document.getElementById('dl-clear-btn');
     const platformIndicator = document.getElementById('dl-platform-indicator');
 
+    if (directLinkBtn) directLinkBtn.classList.add('hidden');
     if (videoElem) {
       videoElem.pause();
       videoElem.src = '';
@@ -382,11 +408,7 @@ function initDownloaderFlow() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, quality })
       });
-      const data = await resp.json();
-
-      if (!resp.ok) {
-        throw new Error(data.detail || "Download failed.");
-      }
+      const data = await safeFetchJson(resp);
 
       const media = data.data;
       showToast("Download complete! Playing preview...", "success");
@@ -459,11 +481,7 @@ function initExtractorFlow() {
           bitrate: selectedBitrate
         })
       });
-      const data = await resp.json();
-
-      if (!resp.ok) {
-        throw new Error(data.detail || "Extraction failed.");
-      }
+      const data = await safeFetchJson(resp);
 
       currentMedia = data.data;
       document.getElementById('ext-preview-title').textContent = currentMedia.title;
@@ -810,11 +828,7 @@ function initVideoToAudioFlow() {
           method: 'POST',
           body: formData
         });
-        const data = await resp.json();
-
-        if (!resp.ok) {
-          throw new Error(data.detail || "Video to audio conversion failed.");
-        }
+        const data = await safeFetchJson(resp);
 
         currentResult = data.data;
         document.getElementById('v2a-preview-title').textContent = currentResult.title;
@@ -974,11 +988,7 @@ function initAudioToVideoFlow() {
         method: 'POST',
         body: formData
       });
-      const data = await resp.json();
-
-      if (!resp.ok) {
-        throw new Error(data.detail || "Video generation failed.");
-      }
+      const data = await safeFetchJson(resp);
 
       currentVideoResult = data.data;
       document.getElementById('a2v-preview-title').textContent = currentVideoResult.title;

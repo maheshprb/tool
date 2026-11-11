@@ -104,31 +104,35 @@ def download_video_stream(url: str, quality_id: str = "best") -> dict:
     file_id = str(uuid.uuid4())[:8]
     output_template = str(DOWNLOADS_DIR / f"{file_id}_%(title).100s.%(ext)s")
     
-    # Configure format selection
+    # Configure format selection (prioritize pre-merged progressive mp4 for fast cloud download)
     if quality_id == "best" or not quality_id.startswith("height_"):
-        format_selector = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best"
+        format_selector = "best[ext=mp4]/bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
     else:
         try:
             target_height = int(quality_id.replace("height_", ""))
             format_selector = (
+                f"best[height<={target_height}][ext=mp4]/"
                 f"bestvideo[height<={target_height}][ext=mp4]+bestaudio[ext=m4a]/"
                 f"bestvideo[height<={target_height}]+bestaudio/"
-                f"best[height<={target_height}][ext=mp4]/best"
+                f"best"
             )
         except ValueError:
-            format_selector = "bestvideo+bestaudio/best"
+            format_selector = "best[ext=mp4]/best"
 
     ydl_opts = {
         'format': format_selector,
         'outtmpl': output_template,
         'merge_output_format': 'mp4',
         'ffmpeg_location': get_ffmpeg_binary(),
+        'quiet': True,
+        'no_warnings': True,
+        'noplaylist': True,
+        'socket_timeout': 20,
+        'retries': 3,
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4',
         }],
-        'quiet': False,
-        'no_warnings': True,
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -167,16 +171,19 @@ def extract_audio_stream(url: str, bitrate: str = "320") -> dict:
     output_template = str(DOWNLOADS_DIR / f"{file_id}_%(title).100s.%(ext)s")
     
     ydl_opts = {
-        'format': 'bestaudio/best',
+        'format': 'bestaudio[ext=m4a]/bestaudio/best',
         'outtmpl': output_template,
         'ffmpeg_location': get_ffmpeg_binary(),
+        'quiet': True,
+        'no_warnings': True,
+        'noplaylist': True,
+        'socket_timeout': 20,
+        'retries': 3,
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': bitrate,
         }],
-        'quiet': False,
-        'no_warnings': True,
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
