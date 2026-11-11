@@ -2,7 +2,7 @@ import os
 import uuid
 import yt_dlp
 from pathlib import Path
-from .utils import sanitize_filename, format_duration, format_filesize, get_storage_dirs
+from .utils import sanitize_filename, format_duration, format_filesize, get_storage_dirs, get_ffmpeg_binary
 
 DOWNLOADS_DIR, PREVIEWS_DIR, _ = get_storage_dirs()
 
@@ -122,6 +122,7 @@ def download_video_stream(url: str, quality_id: str = "best") -> dict:
         'format': format_selector,
         'outtmpl': output_template,
         'merge_output_format': 'mp4',
+        'ffmpeg_location': get_ffmpeg_binary(),
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4',
@@ -168,6 +169,7 @@ def extract_audio_stream(url: str, bitrate: str = "320") -> dict:
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': output_template,
+        'ffmpeg_location': get_ffmpeg_binary(),
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',

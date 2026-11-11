@@ -2,25 +2,10 @@ import os
 import subprocess
 import uuid
 from pathlib import Path
-from .utils import sanitize_filename, format_duration, format_filesize, get_storage_dirs
+from .utils import sanitize_filename, format_duration, format_filesize, get_storage_dirs, get_ffmpeg_binary, get_media_duration
 from .visualizer import generate_background_card, process_custom_image_to_aspect
 
 DOWNLOADS_DIR, PREVIEWS_DIR, UPLOADS_DIR = get_storage_dirs()
-
-def get_media_duration(file_path: str) -> float:
-    """Use ffprobe to get media duration in seconds."""
-    cmd = [
-        'ffprobe',
-        '-v', 'error',
-        '-show_entries', 'format=duration',
-        '-of', 'default=noprint_wrappers=1:nokey=1',
-        file_path
-    ]
-    try:
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-        return float(res.stdout.strip())
-    except Exception:
-        return 0.0
 
 def convert_video_to_audio(input_video_path: str, output_format: str = "mp3", bitrate: str = "320k") -> dict:
     """Convert any video file to audio (mp3, m4a, wav, aac, flac)."""
@@ -31,7 +16,7 @@ def convert_video_to_audio(input_video_path: str, output_format: str = "mp3", bi
     output_path = DOWNLOADS_DIR / output_filename
     
     # Configure encoder and flags based on format
-    cmd = ['ffmpeg', '-y', '-i', str(input_path), '-vn']
+    cmd = [get_ffmpeg_binary(), '-y', '-i', str(input_path), '-vn']
     
     if output_format == "mp3":
         cmd.extend(['-c:a', 'libmp3lame', '-b:a', bitrate])
@@ -95,7 +80,7 @@ def convert_audio_to_video(
         
     # 2. Encode to universal MP4 with FFmpeg
     cmd = [
-        'ffmpeg', '-y',
+        get_ffmpeg_binary(), '-y',
         '-loop', '1',
         '-framerate', '2',
         '-i', backdrop_path,

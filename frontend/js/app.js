@@ -549,6 +549,150 @@ function initExtractorFlow() {
   });
 }
 
+// ==========================================
+// CLIENT-SIDE AUDIO ENCODER & PROCESSOR (Zero-Upload for Vercel)
+// ==========================================
+function audioBufferToMp3Blob(audioBuffer, bitrateKbps = 192) {
+  if (typeof lamejs === 'undefined') {
+    return audioBufferToWavBlob(audioBuffer);
+  }
+
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const mp3encoder = new lamejs.Mp3Encoder(numChannels > 1 ? 2 : 1, sampleRate, bitrateKbps);
+  const mp3Data = [];
+
+  const left = audioBuffer.getChannelData(0);
+  const leftInt16 = new Int16Array(left.length);
+  for (let i = 0; i < left.length; i++) {
+    const s = Math.max(-1, Math.min(1, left[i]));
+    leftInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+
+  let rightInt16 = null;
+  if (numChannels > 1) {
+    const right = audioBuffer.getChannelData(1);
+    rightInt16 = new Int16Array(right.length);
+    for (let i = 0; i < right.length; i++) {
+      const s = Math.max(-1, Math.min(1, right[i]));
+      rightInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+  }
+
+  const chunkSize = 1152;
+  for (let i = 0; i < leftInt16.length; i += chunkSize) {
+    const leftChunk = leftInt16.subarray(i, i + chunkSize);
+    let mp3buf;
+    if (numChannels > 1) {
+      const rightChunk = rightInt16.subarray(i, i + chunkSize);
+      mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+    } else {
+      mp3buf = mp3encoder.encodeBuffer(leftChunk);
+    }
+    if (mp3buf.length > 0) {
+      mp3Data.push(mp3buf);
+    }
+  }
+
+  const endBuf = mp3encoder.flush();
+  if (endBuf.length > 0) {
+    mp3Data.push(endBuf);
+  }
+
+  return new Blob(mp3Data, { type: 'audio/mp3' });
+}
+
+function audioBufferToWavBlob(audioBuffer) {
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const format = 1;
+  const bitDepth = 16;
+  const bytesPerSample = bitDepth / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const length = audioBuffer.length * blockAlign;
+  const buffer = new ArrayBuffer(44 + length);
+  const view = new DataView(buffer);
+
+  function writeString(offset, string) {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  }
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + length, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, format, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(36, 'data');
+  view.setUint32(40, length, true);
+
+  let offset = 44;
+  for (let i = 0; i < audioBuffer.length; i++) {
+    for (let channel = 0; channel < numChannels; channel++) {
+      const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      offset += 2;
+    }
+  }
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+async function extractAudioClientSide(file, format = 'mp3', bitrateKbps = 192) {
+  const arrayBuf = await file.arrayBuffer();
+  const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtxClass) {
+    throw new Error("Web Audio API not supported in this browser.");
+  }
+  const audioCtx = new AudioCtxClass();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
+  
+  if (format === 'wav') {
+    return audioBufferToWavBlob(audioBuffer);
+  }
+  return audioBufferToMp3Blob(audioBuffer, bitrateKbps);
+}
+
+async function resizeImageClientSide(file, maxWidth = 1280, maxHeight = 1280, quality = 0.85) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          resolve(blob || file);
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 // 3. VIDEO TO AUDIO CONVERTER FLOW (Upload File -> Audio)
 function initVideoToAudioFlow() {
   const fileInput = document.getElementById('v2a-file-input');
@@ -604,42 +748,90 @@ function initVideoToAudioFlow() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('format', formatSelect.value);
-    formData.append('bitrate', bitrateSelect.value);
+    const format = formatSelect.value;
+    const bitrateStr = bitrateSelect.value;
+    const bitrateNum = parseInt(bitrateStr) || 320;
 
     convertBtn.disabled = true;
     loadingIndicator.classList.remove('hidden');
     previewSection.classList.add('hidden');
 
+    const loadingText = loadingIndicator.querySelector('span');
+    if (loadingText) loadingText.textContent = "Extracting audio directly on your device...";
+
+    // 1. In-browser audio decoding (Zero-upload, bypasses Vercel 4.5MB limit)
+    let convertedLocally = false;
     try {
-      const resp = await fetch('/api/convert/video-to-audio', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await resp.json();
+      const audioBlob = await extractAudioClientSide(selectedFile, format, bitrateNum);
+      const cleanStem = selectedFile.name.replace(/\.[^/.]+$/, "");
+      const outputFilename = `${cleanStem}.${format}`;
+      const blobUrl = URL.createObjectURL(audioBlob);
 
-      if (!resp.ok) {
-        throw new Error(data.detail || "Video to audio conversion failed.");
-      }
+      currentResult = {
+        title: cleanStem,
+        format: format.toUpperCase(),
+        filename: outputFilename,
+        filesize_formatted: formatBytes(audioBlob.size),
+        preview_url: blobUrl,
+        download_url: blobUrl,
+        is_blob: true
+      };
 
-      currentResult = data.data;
       document.getElementById('v2a-preview-title').textContent = currentResult.title;
       document.getElementById('v2a-preview-format').textContent = `${currentResult.format} • ${currentResult.filesize_formatted}`;
 
-      // Load into audio preview player
       window.videoToAudioPlayer.loadAudio(currentResult.preview_url, currentResult.title);
       previewSection.classList.remove('hidden');
       previewSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-      showToast("Audio converted! Ready to play & save.", "success");
-    } catch (err) {
-      showToast(err.message, "error");
-    } finally {
-      convertBtn.disabled = false;
-      loadingIndicator.classList.add('hidden');
+      showToast("Audio extracted! Ready to play & save.", "success");
+      convertedLocally = true;
+    } catch (clientErr) {
+      console.warn("Client-side audio decode failed, falling back to server:", clientErr);
     }
+
+    // 2. Server fallback if client decode couldn't parse the codec
+    if (!convertedLocally) {
+      if (selectedFile.size > 4.5 * 1024 * 1024) {
+        showToast("Browser could not decode this video format, and file exceeds cloud upload limit (>4.5MB). Please use an MP4 or WebM video.", "error");
+        convertBtn.disabled = false;
+        loadingIndicator.classList.add('hidden');
+        return;
+      }
+
+      try {
+        if (loadingText) loadingText.textContent = "Processing via server engine...";
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('format', format);
+        formData.append('bitrate', bitrateStr);
+
+        const resp = await fetch('/api/convert/video-to-audio', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(data.detail || "Video to audio conversion failed.");
+        }
+
+        currentResult = data.data;
+        document.getElementById('v2a-preview-title').textContent = currentResult.title;
+        document.getElementById('v2a-preview-format').textContent = `${currentResult.format} • ${currentResult.filesize_formatted}`;
+
+        window.videoToAudioPlayer.loadAudio(currentResult.preview_url, currentResult.title);
+        previewSection.classList.remove('hidden');
+        previewSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        showToast("Audio converted! Ready to play & save.", "success");
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    convertBtn.disabled = false;
+    loadingIndicator.classList.add('hidden');
   });
 
   document.getElementById('v2a-play-btn').addEventListener('click', () => {
@@ -734,21 +926,50 @@ function initAudioToVideoFlow() {
     let selectedTheme = "midnight";
     themeRadios.forEach(r => { if (r.checked) selectedTheme = r.value; });
 
-    const formData = new FormData();
-    formData.append('audio_file', selectedAudio);
-    if (selectedArt) {
-      formData.append('custom_image', selectedArt);
-    }
-    formData.append('aspect_ratio', selectedAspect);
-    formData.append('theme', selectedTheme);
-    formData.append('title', selectedAudio.name.replace(/\.[^/.]+$/, ""));
-    formData.append('artist', "Father's Collection");
-
     generateBtn.disabled = true;
     loadingIndicator.classList.remove('hidden');
     previewSection.classList.add('hidden');
 
+    const loadingText = loadingIndicator.querySelector('span');
+    if (loadingText) loadingText.textContent = "Preparing audio and theme backdrop...";
+
     try {
+      let audioToSend = selectedAudio;
+      // If audio file is large (> 3.8 MB), pre-compress on-device so it easily fits within Vercel's 4.5MB limit
+      if (selectedAudio.size > 3.8 * 1024 * 1024) {
+        if (loadingText) loadingText.textContent = "Optimizing audio track for fast upload...";
+        try {
+          const compressedBlob = await extractAudioClientSide(selectedAudio, 'mp3', 192);
+          const cleanStem = selectedAudio.name.replace(/\.[^/.]+$/, "");
+          audioToSend = new File([compressedBlob], `${cleanStem}.mp3`, { type: 'audio/mp3' });
+        } catch (compErr) {
+          console.warn("Client pre-compression skipped, trying raw upload:", compErr);
+        }
+      }
+
+      let artToSend = selectedArt;
+      // If custom image is large (> 1.5 MB), resize down to 1280px on-device
+      if (selectedArt && selectedArt.size > 1.5 * 1024 * 1024) {
+        try {
+          const resizedBlob = await resizeImageClientSide(selectedArt, 1280, 1280, 0.85);
+          artToSend = new File([resizedBlob], "cover.jpg", { type: 'image/jpeg' });
+        } catch (imgErr) {
+          console.warn("Client image resize skipped:", imgErr);
+        }
+      }
+
+      if (loadingText) loadingText.textContent = "Rendering video with luxury theme backdrop...";
+
+      const formData = new FormData();
+      formData.append('audio_file', audioToSend);
+      if (artToSend) {
+        formData.append('custom_image', artToSend);
+      }
+      formData.append('aspect_ratio', selectedAspect);
+      formData.append('theme', selectedTheme);
+      formData.append('title', selectedAudio.name.replace(/\.[^/.]+$/, ""));
+      formData.append('artist', "Personal Collection");
+
       const resp = await fetch('/api/convert/audio-to-video', {
         method: 'POST',
         body: formData

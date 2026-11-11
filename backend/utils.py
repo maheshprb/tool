@@ -105,3 +105,50 @@ def get_storage_dirs():
         pass
 
     return downloads, previews, uploads
+
+def get_ffmpeg_binary() -> str:
+    """Return path to ffmpeg executable, preferring system ffmpeg, then imageio-ffmpeg bundled binary."""
+    try:
+        import shutil
+        sys_ffmpeg = shutil.which("ffmpeg")
+        if sys_ffmpeg:
+            return sys_ffmpeg
+    except Exception:
+        pass
+
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return "ffmpeg"
+
+def get_media_duration(file_path: str) -> float:
+    """Extract media duration in seconds using ffprobe if present, or ffmpeg -i."""
+    import subprocess
+    import shutil
+    ffmpeg_bin = get_ffmpeg_binary()
+    ffprobe_bin = shutil.which("ffprobe")
+    
+    if ffprobe_bin:
+        cmd = [
+            ffprobe_bin,
+            '-v', 'error',
+            '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            file_path
+        ]
+        try:
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            return float(res.stdout.strip())
+        except Exception:
+            pass
+
+    try:
+        res = subprocess.run([ffmpeg_bin, '-i', file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", res.stderr)
+        if m:
+            hours, mins, secs = float(m.group(1)), float(m.group(2)), float(m.group(3))
+            return hours * 3600 + mins * 60 + secs
+    except Exception:
+        pass
+    return 0.0
