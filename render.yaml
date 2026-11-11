@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: media-studio
+    env: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/status
+    envVars:
+      - key: PORT
+        value: 8000

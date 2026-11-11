@@ -1,0 +1,11 @@
+.git
+__pycache__
+*.pyc
+media_storage/downloads/*
+!media_storage/downloads/.gitkeep
+media_storage/previews/*
+!media_storage/previews/.gitkeep
+media_storage/uploads/*
+!media_storage/uploads/.gitkeep
+.venv
+venv
