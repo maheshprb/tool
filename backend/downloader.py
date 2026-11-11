@@ -2,12 +2,9 @@ import os
 import uuid
 import yt_dlp
 from pathlib import Path
-from .utils import sanitize_filename, format_duration, format_filesize
+from .utils import sanitize_filename, format_duration, format_filesize, get_storage_dirs
 
-DOWNLOADS_DIR = Path(__file__).parent.parent / "media_storage" / "downloads"
-PREVIEWS_DIR = Path(__file__).parent.parent / "media_storage" / "previews"
-DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
-PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
+DOWNLOADS_DIR, PREVIEWS_DIR, _ = get_storage_dirs()
 
 def detect_platform(url: str) -> str:
     url_lower = url.lower()

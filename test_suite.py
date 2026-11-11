@@ -7,9 +7,9 @@ from fastapi.testclient import TestClient
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
-from backend.app import app
+from backend.app import app as backend_app
 
-client = TestClient(app)
+client = TestClient(backend_app)
 
 def run_tests():
     print("--- 1. Testing System Status & Network Info ---")

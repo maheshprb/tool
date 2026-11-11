@@ -70,14 +70,38 @@ def format_filesize(bytes_val: int | float | None) -> str:
 
 def cleanup_old_files(directory: str | Path, max_age_seconds: int = 86400):
     """Remove files older than max_age_seconds (default 24h)."""
-    now = time.time()
-    p = Path(directory)
-    if not p.exists():
-        return
-    for item in p.iterdir():
-        if item.is_file():
-            try:
-                if now - item.stat().st_mtime > max_age_seconds:
-                    item.unlink(missing_ok=True)
-            except Exception:
-                pass
+    try:
+        now = time.time()
+        p = Path(directory)
+        if not p.exists():
+            return
+        for item in p.iterdir():
+            if item.is_file():
+                try:
+                    if now - item.stat().st_mtime > max_age_seconds:
+                        item.unlink(missing_ok=True)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+def get_storage_dirs():
+    """Return storage paths, using /tmp in serverless/Vercel environments to prevent read-only errors."""
+    base = Path(__file__).resolve().parent.parent
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        storage = Path("/tmp") / "media_storage"
+    else:
+        storage = base / "media_storage"
+
+    downloads = storage / "downloads"
+    previews = storage / "previews"
+    uploads = storage / "uploads"
+
+    try:
+        downloads.mkdir(parents=True, exist_ok=True)
+        previews.mkdir(parents=True, exist_ok=True)
+        uploads.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
+    return downloads, previews, uploads

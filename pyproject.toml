@@ -1,0 +1,17 @@
+[project]
+name = "media-studio"
+version = "0.1.0"
+description = "All-in-One Downloader & Media Studio"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "python-multipart>=0.0.9",
+    "yt-dlp>=2024.3.10",
+    "pillow>=10.0.0",
+    "qrcode>=7.4.2",
+]
+
+[tool.vercel]
+entrypoint = "backend.app:app"

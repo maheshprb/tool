@@ -2,16 +2,10 @@ import os
 import subprocess
 import uuid
 from pathlib import Path
-from .utils import sanitize_filename, format_duration, format_filesize
+from .utils import sanitize_filename, format_duration, format_filesize, get_storage_dirs
 from .visualizer import generate_background_card, process_custom_image_to_aspect
 
-DOWNLOADS_DIR = Path(__file__).parent.parent / "media_storage" / "downloads"
-PREVIEWS_DIR = Path(__file__).parent.parent / "media_storage" / "previews"
-UPLOADS_DIR = Path(__file__).parent.parent / "media_storage" / "uploads"
-
-DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
-PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
-UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+DOWNLOADS_DIR, PREVIEWS_DIR, UPLOADS_DIR = get_storage_dirs()
 
 def get_media_duration(file_path: str) -> float:
     """Use ffprobe to get media duration in seconds."""

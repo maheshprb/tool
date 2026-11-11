@@ -9,14 +9,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .utils import get_local_ip, generate_qr_data_url, cleanup_old_files, sanitize_filename
+from .utils import get_local_ip, generate_qr_data_url, cleanup_old_files, sanitize_filename, get_storage_dirs
 from .downloader import get_media_info, download_video_stream, extract_audio_stream
 from .converter import convert_video_to_audio, convert_audio_to_video
 
-BASE_DIR = Path(__file__).parent.parent
-DOWNLOADS_DIR = BASE_DIR / "media_storage" / "downloads"
-PREVIEWS_DIR = BASE_DIR / "media_storage" / "previews"
-UPLOADS_DIR = BASE_DIR / "media_storage" / "uploads"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DOWNLOADS_DIR, PREVIEWS_DIR, UPLOADS_DIR = get_storage_dirs()
 FRONTEND_DIR = BASE_DIR / "frontend"
 
 app = FastAPI(title="Media Studio", version="1.0.0")
